@@ -11,6 +11,7 @@
 #include <map>
 #include <pcl/filters/impl/voxel_grid.hpp>
 #include <pcl/segmentation/impl/sac_segmentation.hpp>
+#include <pcl/io/pcd_io.h>
 
 #include "utils/timer.h"
 #include "yaml-cpp/yaml.h"
@@ -271,6 +272,8 @@ G2P5MapPtr G2P5::GetNewestMap() {
 }
 
 void G2P5::Convert3DTo2DScan(Keyframe::Ptr kf, G2P5MapPtr &map) {
+
+    kf->AlignCloudToGravity();
     // 3D转2D算法
     if (options_.esti_floor_) {
         if (!DetectPlaneCoeffs(kf)) {
@@ -296,9 +299,11 @@ void G2P5::Convert3DTo2DScan(Keyframe::Ptr kf, G2P5MapPtr &map) {
     double max_th = options_.max_th_floor_;
 
     /// 把激光系下的点云转到当前submap坐标系
-    auto cloud = kf->GetCloud();
+    auto cloud = kf->GetGravityAlignedCloud();
 
     CloudPtr obstacle_cloud(new PointCloudType);
+    Vec4d lidar_n(Twb.translation().x(), Twb.translation().y(), Twb.translation().z(), 1);
+    current_lidar_height_ = lidar_n.dot(floor_coeffs_);
 
     /// 黑色点的处理方式：所有在障碍物范围内的都是黑色点
     int cnt_valid = 0;
@@ -308,8 +313,11 @@ void G2P5::Convert3DTo2DScan(Keyframe::Ptr kf, G2P5MapPtr &map) {
             return;
         }
 
+
         Vec3d pc = Vec3d(pt.x, pt.y, pt.z);
-        Vec4d pn = Vec4d(pt.x, pt.y, pt.z, 1);
+        // Vec3d pc_w = Twb.rotationMatrix() * pc;
+        Vec4d pn = Vec4d(pc.x(), pc.y(), pc.z(), 1.);
+        Vec3d tw_b = Twb.translation();
 
         // 计算激光点所在角度方向以及高度
         Vec2d p = pc.head<2>();
@@ -331,7 +339,8 @@ void G2P5::Convert3DTo2DScan(Keyframe::Ptr kf, G2P5MapPtr &map) {
                 rays[angle].insert({dis, dis_floor});
 
                 /// 设置黑点
-                Vec3d p_world = Twb * pc;
+                // Vec3d p_world = Twb * pc;
+                Vec3d p_world = pc + tw_b;
                 map->SetHitPoint(p_world[0], p_world[1], true, dis_floor);
 
                 cnt_valid++;
@@ -416,18 +425,19 @@ void G2P5::SetWhitePoints(const std::vector<Vec2d> &pt2d, Keyframe::Ptr kf, G2P5
         float h = pt2d[i][1];
 
         Vec3d p_local(r * cos(angle), r * sin(angle), h);
-        Vec3d p_world = pose * p_local;
+        // Vec3d p_world = pose * p_local;
+        Vec3d p_world = p_local + orig;
 
         /// 某方向无测量值时，认为无效
         if (r <= 0 || r > options_.usable_scan_range_) {
             /// 比较近时，涂白
             if (r < 0.1) {
-                map->SetMissPoint(p_world[0], p_world[1], orig[0], orig[1], h, options_.lidar_height_);
+                map->SetMissPoint(p_world[0], p_world[1], orig[0], orig[1], h, current_lidar_height_);
             }
             continue;
         }
 
-        map->SetMissPoint(p_world[0], p_world[1], orig[0], orig[1], h, options_.lidar_height_);
+        map->SetMissPoint(p_world[0], p_world[1], orig[0], orig[1], h, current_lidar_height_);
     }
 }
 
@@ -441,7 +451,7 @@ bool G2P5::DetectPlaneCoeffs(Keyframe::Ptr kf) {
     seg.setDistanceThreshold(0.25);
 
     CloudPtr cloud(new PointCloudType);
-    for (auto &pt : kf->GetCloud()->points) {
+    for (auto &pt : kf->GetGravityAlignedCloud()->points) {
         if (pt.z < options_.lidar_height_ + options_.default_floor_height_) {
             cloud->points.push_back(pt);
         }
@@ -465,6 +475,8 @@ bool G2P5::DetectPlaneCoeffs(Keyframe::Ptr kf) {
 
     if (coefficients->values[2] < 0.99) {
         LOG(ERROR) << "floor is not horizontal. ";
+        // int keyframe_id = kf->GetID();
+        // pcl::io::savePCDFile("./data/floor_fail"+std::to_string(keyframe_id)+".pcd", *cloud);
         return false;
     }
 

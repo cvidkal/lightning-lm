@@ -69,6 +69,37 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(ouster_ros::Point,
                                       (std::uint16_t, ambient, ambient)
                                       (std::uint32_t, range, range)
 )
+namespace livox_ros
+{
+  struct EIGEN_ALIGN16 Point
+  {
+    PCL_ADD_POINT4D;                // 4D点坐标类型,xyz+padding,float padding用于填补位数,以满足存储对齐要求
+    float intensity;                // Reflectivity
+    uint8_t tag;                    // Livox point tag
+    uint8_t line;                   // Laser line id
+    uint8_t reflectivity;           // reflectivity, 0~255
+    uint32_t offset_time;           // offset time relative to the base time
+    PCL_ADD_RGB;                    // RGB
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW // 进行内存对齐
+  };
+  struct EIGEN_ALIGN16 PointSkyland
+  {
+    PCL_ADD_POINT4D;                // 4D点坐标类型,xyz+padding,float padding用于填补位数,以满足存储对齐要求
+    float intensity;                // Reflectivity
+    uint8_t tag;                    // Livox point tag
+    uint8_t line;                   // Laser line id
+    double timestamp;           // offset time relative to the base time
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW // 进行内存对齐
+  };
+}
+// 注册livox_ros的Point类型
+POINT_CLOUD_REGISTER_POINT_STRUCT(livox_ros::Point,
+                                  (float, x, x)(float, y, y)(float, z, z)
+                                  (float, intensity, intensity)(std::uint8_t, tag, tag)(std::uint8_t, line, line)(std::uint8_t, reflectivity, reflectivity)(std::uint32_t, offset_time, offset_time)(float, rgb, rgb))
+// 注册livox_ros_skyland的Point类型
+POINT_CLOUD_REGISTER_POINT_STRUCT(livox_ros::PointSkyland,
+                                  (float, x, x)(float, y, y)(float, z, z)
+                                  (float, intensity, intensity)(std::uint8_t, tag, tag)(std::uint8_t, line, line)(double, timestamp, timestamp))
 // clang-format on
 
 namespace lightning {

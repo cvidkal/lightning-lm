@@ -96,7 +96,7 @@ void LoopClosing::HandleKF(Keyframe::Ptr kf) {
 void LoopClosing::DetectLoopCandidates() {
     candidates_.clear();
 
-    auto& kfs_mapping = all_keyframes_;
+    auto& kfs_mapping = all_keyframes_
     Keyframe::Ptr check_first = nullptr;
 
     if (last_loop_kf_ == nullptr) {
@@ -159,7 +159,7 @@ void LoopClosing::ComputeLoopCandidates() {
     }
 
     if (options_.verbose_) {
-        LOG(INFO) << "success: " << succ_candidates.size() << "/" << candidates_.size();
+        LOG(WARNING) << "success: " << succ_candidates.size() << "/" << candidates_.size();
     }
 
     candidates_.swap(succ_candidates);

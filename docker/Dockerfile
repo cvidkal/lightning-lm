@@ -48,6 +48,7 @@ RUN apt update && apt install -y \
     ros-${ROS_DISTRO}-pcl-ros \
     ros-${ROS_DISTRO}-octomap \
     ros-${ROS_DISTRO}-pinocchio \
+    ros-${ROS_DISTRO}-pangolin \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -69,18 +70,18 @@ RUN git clone --recurse-submodules https://github.com/leggedrobotics/hpp-fcl.git
 # 安装Pangolin库
 WORKDIR /tmp
 
-RUN git clone --recurse-submodules https://github.com/stevenlovegrove/Pangolin.git && \
-    cd Pangolin && \
-    mkdir build && cd build && \
-    cmake .. \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DBUILD_WITH_COLLISION_SUPPORT=ON \
-        -DBUILD_PYTHON_INTERFACE=OFF && \
-    make && \
-    make install && \
-    cd / && \
-    rm -rf /tmp/Pangolin
+# RUN git clone --recurse-submodules https://github.com/stevenlovegrove/Pangolin.git && \
+#     cd Pangolin && \
+#     mkdir build && cd build && \
+#     cmake .. \
+#         -DCMAKE_BUILD_TYPE=Release \
+#         -DCMAKE_INSTALL_PREFIX=/usr/local \
+#         -DBUILD_WITH_COLLISION_SUPPORT=ON \
+#         -DBUILD_PYTHON_INTERFACE=OFF && \
+#     make && \
+#     make install && \
+#     cd / && \
+#     rm -rf /tmp/Pangolin
 
 # 创建 ROS 工作空间
 WORKDIR ${ROS_WS}
@@ -89,7 +90,7 @@ WORKDIR ${ROS_WS}
 RUN /bin/bash -c "mkdir -p src && \
     source /opt/ros/${ROS_DISTRO}/setup.bash && \
     git clone https://github.com/gaoxiang12/lightning-lm.git src/lightning-lm&& \
-    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release && \
+    MAKEFLAGS=-j8 colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release && \
     # 将source命令写入bashrc（持久化配置）
     echo 'source /${ROS_WS}/install/setup.bash' >> ~/.bashrc && \
     echo 'source /opt/ros/${ROS_DISTRO}/setup.bash' >> ~/.bashrc"

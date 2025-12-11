@@ -9,6 +9,7 @@
 #include "common/nav_state.h"
 #include "common/point_def.h"
 #include "common/std_types.h"
+#include <pcl/common/transforms.h>
 
 namespace lightning {
 
@@ -61,11 +62,32 @@ class Keyframe {
         return state_;
     }
 
+    CloudPtr GetGravityAlignedCloud() {
+        UL lock(data_mutex_);
+        return cloud_gravity_aligned_;
+    }
+
+    void AlignCloudToGravity() {
+        UL lock(data_mutex_);
+        if (cloud_ == nullptr) {
+            return;
+        }
+
+        // 计算旋转矩阵
+        Mat3d R_wb = state_.GetPose().rotationMatrix();
+
+        cloud_gravity_aligned_.reset(new PointCloudType);
+        Eigen::Transform<double, 3, Eigen::Affine> T(R_wb);
+        // Eigen::Isometry3d T(R_wb);
+        pcl::transformPointCloud(*cloud_, *cloud_gravity_aligned_, T);
+    }
+
    protected:
     unsigned long id_ = 0;
 
     double timestamp_ = 0;
     CloudPtr cloud_ = nullptr;  /// 降采样之后的点云
+    CloudPtr cloud_gravity_aligned_ = nullptr;  /// 降采样之后的点云
 
     std::mutex data_mutex_;
     SE3 pose_lio_;  // 前端的pose

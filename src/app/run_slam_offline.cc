@@ -20,7 +20,7 @@ DEFINE_string(config, "./config/default.yaml", "配置文件");
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_colorlogtostderr = true;
-    FLAGS_stderrthreshold = google::INFO;
+    FLAGS_stderrthreshold = google::WARNING;
 
     google::ParseCommandLineFlags(&argc, &argv, true);
     if (FLAGS_input_bag.empty()) {
@@ -49,6 +49,12 @@ int main(int argc, char** argv) {
     lightning::YAML_IO yaml(FLAGS_config);
     std::string lidar_topic = yaml.GetValue<std::string>("common", "lidar_topic");
     std::string imu_topic = yaml.GetValue<std::string>("common", "imu_topic");
+    int lidar_type = yaml.GetValue<int>("fasterlio", "lidar_type");
+
+    LOG(INFO) << "processing bag: " << FLAGS_input_bag;
+    // print lidar_topic, imu_topic
+    LOG(INFO) << "lidar_topic: " << lidar_topic;
+    LOG(INFO) << "imu_topic: " << imu_topic;
 
     rosbag
         /// IMU 的处理

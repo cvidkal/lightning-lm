@@ -111,6 +111,25 @@ inline void ImuProcess::SetGyrBiasCov(const Vec3d &b_g) { cov_bias_gyr_ = b_g; }
 
 inline void ImuProcess::SetAccBiasCov(const Vec3d &b_a) { cov_bias_acc_ = b_a; }
 
+inline Mat3d GetRotByAlignVector(const Vec3d& vec,
+                                    const Vec3d& vec_ref) {
+    Vec3d vec_normalize = vec.normalized();
+    Vec3d vec_ref_normalize = vec_ref.normalized();
+    Vec3d axis = vec_normalize.cross(vec_ref_normalize);
+    if (axis.norm() < FLT_EPSILON) {
+        return Mat3d::Identity();
+    }
+    double dot = vec_normalize.dot(vec_ref_normalize);
+    double angle = std::acos(dot);
+    axis.normalize();
+    Mat3d axisSkew;
+    axisSkew << 0, -axis.z(), axis.y(), axis.z(), 0, -axis.x(), -axis.y(),
+        axis.x(), 0;
+    Mat3d R = Mat3d::Identity() + std::sin(angle) * axisSkew +
+                 (1 - std::cos(angle)) * axisSkew * axisSkew;
+    return R;
+}
+
 inline void ImuProcess::IMUInit(const MeasureGroup &meas, ESKF &kf_state, int &N) {
     /** 1. initializing the gravity_, gyro bias, acc and gyro covariance
      ** 2. normalize the acceleration measurenments to unit gravity_ **/
@@ -146,7 +165,13 @@ inline void ImuProcess::IMUInit(const MeasureGroup &meas, ESKF &kf_state, int &N
 
     auto init_state = kf_state.GetX();
     init_state.timestamp_ = meas.imu_.back()->timestamp;
-    init_state.grav_ = S2(-mean_acc_ / mean_acc_.norm() * G_m_s2);
+    // init_state.grav_ = S2(-mean_acc_ / mean_acc_.norm() * G_m_s2);
+    // init_state.rot_ = SO3(GetRotByAlignVector(mean_acc_, Vec3d(0, 0, -1.0)));
+    init_state.rot_  = SO3::exp(mean_acc_.cross(Vec3d(0, 0, -1 / mean_acc_.norm()))).inverse();
+    init_state.grav_ = S2(Vec3d(0, 0, -1.));
+    // auto g = init_state.rot_.matrix().transpose() * mean_acc_;
+    // std::fflush(stdout);
+    // exit(0);
     init_state.bg_ = mean_gyr_;
     init_state.offset_t_lidar_ = t_lidar_mu_;
     init_state.offset_R_lidar_ = R_lidar_imu_;

@@ -88,7 +88,7 @@ class RosbagIO {
     }
 
     RosbagIO &AddImuHandle(const std::string &topic_name, ImuHandle f) {
-        return AddHandle(topic_name, [f, this](const MsgType &m) -> bool {
+        return AddHandle(topic_name, [topic_name,f, this](const MsgType &m) -> bool {
             auto msg = std::make_shared<sensor_msgs::msg::Imu>();
             rclcpp::SerializedMessage data(*m->serialized_data);
             seri_imu_.deserialize_message(&data, msg.get());
@@ -97,9 +97,14 @@ class RosbagIO {
             imu->timestamp = ToSec(msg->header.stamp);
 
             /// NOTE: 如果需要乘重力，请修改此处
-            imu->linear_acceleration =
-                Vec3d(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
-            // constant::kGRAVITY;
+            if (topic_name.find("livox") != std::string::npos) {
+                imu->linear_acceleration =
+                    Vec3d(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z) *
+                    constant::kGRAVITY;
+            } else {
+                imu->linear_acceleration =
+                    Vec3d(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
+            }
             imu->angular_velocity = Vec3d(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
 
             return f(imu);

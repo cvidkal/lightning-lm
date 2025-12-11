@@ -61,7 +61,7 @@ bool LaserMapping::LoadParamsFromYAML(const std::string &yaml_file) {
 
         ivox_options_.resolution_ = yaml["fasterlio"]["ivox_grid_resolution"].as<float>();
         ivox_nearby_type = yaml["fasterlio"]["ivox_nearby_type"].as<int>();
-        use_aa_ = yaml["fasterlio"]["use_aa"].as<bool>();
+        // use_aa_ = yaml["fasterlio"]["use_aa"].as<bool>();
 
         skip_lidar_num_ = yaml["fasterlio"]["skip_lidar_num"].as<int>();
         enable_skip_lidar_ = skip_lidar_num_ > 0;

@@ -138,6 +138,8 @@ class G2P5 {
     G2P5MapPtr backend_map_ = nullptr;              // 正在绘制的地图
 
     Vec4d floor_coeffs_ = Vec4d(0, 0, 1.0, 1.0);  // 地面方程参数
+
+    double current_lidar_height_ = 0.0;  // 当前雷达的高度
 };
 
 }  // namespace lightning::g2p5
